@@ -15,73 +15,80 @@ const headers = {
   "x-apisports-key": API_KEY,
 };
 
-// ===============================
-// ✅ Root
-// ===============================
+/* ===============================
+   Root
+================================ */
 app.get("/", (req, res) => {
-  res.json({ status: "Goal+ API is running 🚀" });
+  res.json({ status: "Goal+ API is running" });
 });
 
-// ===============================
-// ✅ Leagues (فلترة خفيفة)
-// ===============================
+/* ===============================
+   Leagues (Light filter)
+================================ */
 app.get("/leagues", async (req, res) => {
   try {
     const r = await fetch(`${BASE_URL}/leagues`, { headers });
     const data = await r.json();
+
+    if (!data.response) return res.json([]);
 
     const leagues = data.response.map(l => ({
       id: l.league.id,
       name: l.league.name,
       logo: l.league.logo,
       type: l.league.type,
-      country: l.country.name
+      country: l.country?.name || null
     }));
 
     res.json(leagues);
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Failed to load leagues" });
   }
 });
 
-// ===============================
-// ✅ Competitions (بطولات حالية)
-// ===============================
+/* ===============================
+   Competitions (Current seasons)
+================================ */
 app.get("/competitions", async (req, res) => {
   try {
     const r = await fetch(`${BASE_URL}/leagues?current=true`, { headers });
     const data = await r.json();
 
+    if (!data.response) return res.json([]);
+
     const competitions = data.response.map(l => ({
       id: l.league.id,
       name: l.league.name,
       logo: l.league.logo,
-      country: l.country.name
+      country: l.country?.name || null
     }));
 
     res.json(competitions);
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Failed to load competitions" });
   }
 });
 
-// ===============================
-// ✅ Matches (اليوم فقط + فلترة)
-// ===============================
+/* ===============================
+   Matches (Today only)
+================================ */
 app.get("/matches", async (req, res) => {
   try {
     const today = new Date().toISOString().slice(0, 10);
+
     const r = await fetch(
       `${BASE_URL}/fixtures?date=${today}`,
       { headers }
     );
     const data = await r.json();
 
+    if (!data.response) return res.json([]);
+
     const matches = data.response.map(m => ({
       id: m.fixture.id,
       date: m.fixture.date,
       status: m.fixture.status.short,
-      time: m.fixture.status.elapsed,
+      elapsed: m.fixture.status.elapsed,
       league: {
         name: m.league.name,
         logo: m.league.logo
@@ -99,14 +106,14 @@ app.get("/matches", async (req, res) => {
     }));
 
     res.json(matches);
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Failed to load matches" });
   }
 });
 
-// ===============================
-// ✅ Match Details (مستقبلاً)
-// ===============================
+/* ===============================
+   Match details
+================================ */
 app.get("/match/:id", async (req, res) => {
   try {
     const r = await fetch(
@@ -114,25 +121,27 @@ app.get("/match/:id", async (req, res) => {
       { headers }
     );
     const data = await r.json();
-    const m = data.response[0];
+    const m = data.response?.[0];
 
     if (!m) return res.json(null);
 
     res.json({
       league: m.league.name,
-      stadium: m.fixture.venue.name,
+      stadium: m.fixture.venue?.name || null,
       referee: m.fixture.referee,
       home: m.teams.home,
       away: m.teams.away,
       goals: m.goals
     });
-  } catch {
+  } catch (err) {
     res.status(500).json({ error: "Failed to load match details" });
   }
 });
 
-// ===============================
+/* ===============================
+   Server
+================================ */
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Server running on", PORT);
+  console.log("Server running on port", PORT);
 });
